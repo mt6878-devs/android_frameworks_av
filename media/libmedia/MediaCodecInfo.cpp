@@ -22,7 +22,6 @@
 
 #include <media/stagefright/foundation/ADebug.h>
 #include <media/stagefright/foundation/AMessage.h>
-#include "media/stagefright/foundation/AString.h"
 #include <binder/Parcel.h>
 
 namespace android {
@@ -186,10 +185,6 @@ const char *MediaCodecInfo::getCodecName() const {
     return mName.c_str();
 }
 
-const char *MediaCodecInfo::getHalName() const {
-    return mHalName.c_str();
-}
-
 const char *MediaCodecInfo::getOwnerName() const {
     return mOwner.c_str();
 }
@@ -198,13 +193,11 @@ const char *MediaCodecInfo::getOwnerName() const {
 sp<MediaCodecInfo> MediaCodecInfo::FromParcel(const Parcel &parcel) {
     sMaxSupportedInstances = parcel.readInt32();
     AString name = AString::FromParcel(parcel);
-    AString halName = AString::FromParcel(parcel);
     AString owner = AString::FromParcel(parcel);
     Attributes attributes = static_cast<Attributes>(parcel.readInt32());
     uint32_t rank = parcel.readUint32();
     sp<MediaCodecInfo> info = new MediaCodecInfo;
     info->mName = name;
-    info->mHalName = halName;
     info->mOwner = owner;
     info->mAttributes = attributes;
     info->mRank = rank;
@@ -233,7 +226,6 @@ sp<MediaCodecInfo> MediaCodecInfo::FromParcel(const Parcel &parcel) {
 status_t MediaCodecInfo::writeToParcel(Parcel *parcel) const {
     parcel->writeInt32(sMaxSupportedInstances);
     mName.writeToParcel(parcel);
-    mHalName.writeToParcel(parcel);
     mOwner.writeToParcel(parcel);
     parcel->writeInt32(mAttributes);
     parcel->writeUint32(mRank);
@@ -286,9 +278,6 @@ MediaCodecInfo::MediaCodecInfo()
 
 void MediaCodecInfoWriter::setName(const char* name) {
     mInfo->mName = name;
-    // Upon creation, we use the same name for HAL and info and
-    // only distinguish them during collision resolution.
-    mInfo->mHalName = name;
 }
 
 void MediaCodecInfoWriter::addAlias(const char* name) {
@@ -340,24 +329,6 @@ void MediaCodecInfoWriter::createCodecCaps() {
                 BuildCodecCapabilities(mediaType.c_str(), caps, mInfo->isEncoder(),
                 MediaCodecInfo::sMaxSupportedInstances));
     }
-}
-
-sp<MediaCodecInfo> MediaCodecInfo::splitOutType(const char *mediaType,
-        const char *newName) const {
-    sp<MediaCodecInfo> newInfo = new MediaCodecInfo;
-    newInfo->mName = newName;
-    newInfo->mHalName = mHalName;
-    newInfo->mOwner = mOwner;
-    newInfo->mAttributes = mAttributes;
-    newInfo->mRank = mRank;
-    newInfo->mAliases = mAliases;
-    // allow an alias from the (old) HAL name. If there is a collision, this will be ignored.
-    newInfo->mAliases.add(mHalName);
-
-    // note: mediaType is always a supported type. valueAt() will abort otherwise.
-    newInfo->mCaps.add(AString(mediaType), mCaps.valueAt(getCapabilityIndex(mediaType)));
-    newInfo->mCodecCaps.add(AString(mediaType), mCodecCaps.valueAt(getCodecCapIndex(mediaType)));
-    return newInfo;
 }
 
 // static

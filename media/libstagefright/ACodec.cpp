@@ -7084,10 +7084,8 @@ bool ACodec::UninitializedState::onAllocateComponent(const sp<AMessage> &msg) {
     }
     AString owner = (info->getOwnerName() == nullptr) ? "default" : info->getOwnerName();
 
-    AString componentName = info->getCodecName();
-    // we are no longer using "componentName" as we always pass the codec info for owner.
-    // CHECK(msg->findString("componentName", &componentName));
-    AString halName = info->getHalName();
+    AString componentName;
+    CHECK(msg->findString("componentName", &componentName));
 
     sp<CodecObserver> observer = new CodecObserver(notify);
     sp<IOMX> omx;
@@ -7104,12 +7102,11 @@ bool ACodec::UninitializedState::onAllocateComponent(const sp<AMessage> &msg) {
     pid_t tid = gettid();
     int prevPriority = androidGetThreadPriority(tid);
     androidSetThreadPriority(tid, ANDROID_PRIORITY_FOREGROUND);
-    err = omx->allocateNode(halName.c_str(), observer, &omxNode);
+    err = omx->allocateNode(componentName.c_str(), observer, &omxNode);
     androidSetThreadPriority(tid, prevPriority);
 
     if (err != OK) {
-        ALOGE("Unable to instantiate codec '%s' for '%s' with err %#x.",
-                halName.c_str(), componentName.c_str(), err);
+        ALOGE("Unable to instantiate codec '%s' with err %#x.", componentName.c_str(), err);
 
         mCodec->signalError((OMX_ERRORTYPE)err, makeNoSideEffectStatus(err));
         return false;
